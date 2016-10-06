@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "5E556D2D1D89D6910065816F"
+               BlueprintIdentifier = "227A10591D94DBB900558348"
                BuildableName = "OnTheMap.app"
                BlueprintName = "OnTheMap"
                ReferencedContainer = "container:OnTheMap.xcodeproj">
@@ -32,7 +32,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "5E556D411D89D6910065816F"
+               BlueprintIdentifier = "227A106D1D94DBBA00558348"
                BuildableName = "OnTheMapTests.xctest"
                BlueprintName = "OnTheMapTests"
                ReferencedContainer = "container:OnTheMap.xcodeproj">
@@ -42,7 +42,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "5E556D4C1D89D6910065816F"
+               BlueprintIdentifier = "227A10781D94DBBA00558348"
                BuildableName = "OnTheMapUITests.xctest"
                BlueprintName = "OnTheMapUITests"
                ReferencedContainer = "container:OnTheMap.xcodeproj">
@@ -52,7 +52,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5E556D2D1D89D6910065816F"
+            BlueprintIdentifier = "227A10591D94DBB900558348"
             BuildableName = "OnTheMap.app"
             BlueprintName = "OnTheMap"
             ReferencedContainer = "container:OnTheMap.xcodeproj">
@@ -75,7 +75,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5E556D2D1D89D6910065816F"
+            BlueprintIdentifier = "227A10591D94DBB900558348"
             BuildableName = "OnTheMap.app"
             BlueprintName = "OnTheMap"
             ReferencedContainer = "container:OnTheMap.xcodeproj">
@@ -94,7 +94,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5E556D2D1D89D6910065816F"
+            BlueprintIdentifier = "227A10591D94DBB900558348"
             BuildableName = "OnTheMap.app"
             BlueprintName = "OnTheMap"
             ReferencedContainer = "container:OnTheMap.xcodeproj">
