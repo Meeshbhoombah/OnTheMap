@@ -2,178 +2,142 @@
 //  MapViewController.swift
 //  OnTheMap
 //
+//  Created by benchmark on 9/14/16.
+//  Copyright © 2016 Rohan Mishra. All rights reserved.
+//
 
 import UIKit
 import MapKit
-import CoreLocation
 
-class MapViewController : UIViewController, MKMapViewDelegate, CLLocationManagerDelegate {
+class MapViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate {
+	
+	var pins: [MKAnnotation] = []
+	let locationManager = CLLocationManager()
+	
+	@IBOutlet weak var mapView: MKMapView!
+	
+	// MARK: View Management
+	override func viewDidLoad() {
+		super.viewDidLoad()
+		
+		locationManager.delegate = self
+		locationManager.requestWhenInUseAuthorization()
+		locationManager.desiredAccuracy = kCLLocationAccuracyBest
+		locationManager.startUpdatingLocation()
+		
+		mapView.delegate = self
+		mapView.showsUserLocation = true
+	}
+	
+	override func viewWillAppear(animated: Bool) {
+		super.viewWillAppear(animated)
+		
+		if Students.sharedInstance().locations.isEmpty == true {
+			updateLocations()
+		} else {
+			// Refresh from data on each appearance
+			parseAnnotationsFromDataAndRefresh()
+		}
+	}
+	
+	// MARK: Alerts
+	func showGenericAlertWithTitle(title: String, message: String) {
+		let alert = UIAlertController(title: title, message: message, preferredStyle: .Alert)
+		let ok = UIAlertAction(title: "OK", style: .Default, handler: nil)
+		alert.addAction(ok)
+		presentViewController(alert, animated: true, completion: nil)
+	}
+	
+	// MARK: User Actions
+	
+	@IBAction func refresh(sender: AnyObject?) {
+		updateLocations()
+	}
+	
+	@IBAction func logout(sender: AnyObject) {
+		Client.sharedInstance().logout { (success, error) in
+			if (success){
+				self.dismissViewControllerAnimated(true, completion: nil)
+			} else {
+				dispatch_async(dispatch_get_main_queue()){
+					self.showGenericAlertWithTitle("Logout Failed", message: "Could not log you out of the app! \(error!.localizedDescription)")
+				}
+			}
+		}
+	}
+	
+	// MARK: API Calls
+	func updateLocations(){
+		Client.sharedInstance().updateLocations(100, skip: 0, order: "-updatedAt") { (response, error) in
+			// If we have successfully updated our model's data...
+			if (error != nil){
+				if error!.code != 2 {
+					dispatch_async(dispatch_get_main_queue()){
+						self.showGenericAlertWithTitle("Update Failed", message: "Could not get list of nearby students: \(error?.localizedDescription)")
+					}
+				} else {
+					dispatch_async(dispatch_get_main_queue()){
+						self.showGenericAlertWithTitle("Update Partially Failed", message: "Could not get full list of students. Some might be missing.")
+						self.parseAnnotationsFromDataAndRefresh()
+					}
+				}
+			} else {
+				dispatch_async(dispatch_get_main_queue()){
+					self.parseAnnotationsFromDataAndRefresh()
+				}
+			}
+		}
+	}
+	
+	// MARK: MapView
+	func mapView(mapView: MKMapView, viewForAnnotation annotation: MKAnnotation) -> MKAnnotationView? {
+		var pinView = mapView.dequeueReusableAnnotationViewWithIdentifier("studentPin") as? MKPinAnnotationView
+		
+		// Set up the pin view if we are creating a new one
+		if pinView == nil {
+			pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "studentPin")
+			pinView!.canShowCallout = true
+			pinView!.rightCalloutAccessoryView = UIButton(type: .InfoLight)
+		}
+		// Otherwise reuse as-is
+		else {
+			pinView!.annotation = annotation
+		}
+		
+		return pinView
+	}
+	
+	func mapView(mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+		if control == view.rightCalloutAccessoryView {
+			if let subtitle = view.annotation?.subtitle! {
+				if UIApplication.sharedApplication().canOpenURL(NSURL(string: subtitle)!){
+					UIApplication.sharedApplication().openURL(NSURL(string: subtitle)!)
+				} else {
+					showGenericAlertWithTitle("Cannot Open URL", message: "The URL associated with this student is missing or malformed")
+				}
+				//UIApplication.sharedApplication().openURL(NSURL(string: subtitle)!)
+			}
+		}
+	}
 
-    let delegate = (UIApplication.sharedApplication().delegate as! AppDelegate)
-    let studentModel = StudentModel.sharedInstance
-    let alertHelper = AlertHelper.sharedInstance
-
-    override func viewDidLoad() {
-        setupSubViews()
-        locationManager.requestWhenInUseAuthorization()
-    }
-
-    func mapView(mapView: MKMapView, viewForAnnotation annotation: MKAnnotation) -> MKAnnotationView? {
-        let reuseIdentifier = "annotationPin"
-        var annotationPinView = mapView.dequeueReusableAnnotationViewWithIdentifier("annotationPin") as? MKPinAnnotationView
-
-        if annotationPinView == nil {
-            annotationPinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseIdentifier)
-            annotationPinView?.canShowCallout = true
-            annotationPinView?.pinTintColor = UIColor.redColor()
-            annotationPinView?.rightCalloutAccessoryView = UIButton(type: .DetailDisclosure)
-        } else {
-            annotationPinView?.annotation = annotation
-        }
-
-        return annotationPinView
-    }
-
-    func mapView(mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
-        if control == view.rightCalloutAccessoryView {
-            let app = UIApplication.sharedApplication()
-            if let urlToOpen = view.annotation?.subtitle! {
-                if app.canOpenURL(NSURL(string: urlToOpen)!) {
-                    app.openURL(NSURL(string: urlToOpen)!)
-                } else {
-                    alertHelper.showAlert(target: self, message: "Invalid URL")
-                }
-            }
-        }
-    }
-
-    func locationManager(manager: CLLocationManager, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
-
-        if status == .AuthorizedWhenInUse {
-            locationManager.requestLocation()
-        } else {
-            locationManager.requestWhenInUseAuthorization()
-        }
-    }
-
-    func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        //
-    }
-
-    func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
-        print(error)
-    }
-
-    func addStudentAnnotations() {
-
-        var annotations = [MKAnnotation]()
-        for i in studentModel.studentInformation {
-
-            var nameHolder = ""
-            let annotation = MKPointAnnotation()
-
-            if i.firstName == nil || i.firstName!.isEmpty {
-                nameHolder += "" + " "
-            } else {
-                nameHolder += i.firstName! + " "
-            }
-
-            if i.lastName == nil {
-                nameHolder += "" + " "
-            } else {
-                nameHolder += i.lastName!
-            }
-
-            if i.mediaURL == nil || i.mediaURL!.isEmpty {
-                annotation.subtitle = ""
-            } else {
-                annotation.subtitle = i.mediaURL!
-            }
-
-            annotation.title = nameHolder
-            annotation.coordinate = i.coordinates
-            annotations.append(annotation)
-        }
-        mapView.addAnnotations(annotations)
-    }
-
-    // MARK: - Setup Subviews
-
-    func setupSubViews() {
-        view.addSubview(mapView)
-        setupConstraints()
-    }
-
-    // MARK: - Constraints
-
-    func setupConstraints() {
-        setupMapViewConstraints()
-    }
-
-    func setupMapViewConstraints() {
-
-        let topConstraint = NSLayoutConstraint(
-            item: mapView,
-            attribute: .Top,
-            relatedBy: .Equal,
-            toItem: view,
-            attribute: .Top,
-            multiplier: 1.0,
-            constant: 0)
-
-        let bottomConstraint = NSLayoutConstraint(
-            item: mapView,
-            attribute: .Bottom,
-            relatedBy: .Equal,
-            toItem: view,
-            attribute: .Bottom,
-            multiplier: 1.0,
-            constant: 0)
-
-        let leftConstraint = NSLayoutConstraint(
-            item: mapView,
-            attribute: .Left,
-            relatedBy: .Equal,
-            toItem: view,
-            attribute: .Left,
-            multiplier: 1.0,
-            constant: 0)
-
-        let rightConstraint = NSLayoutConstraint(
-            item: mapView,
-            attribute: .Right,
-            relatedBy: .Equal,
-            toItem: view,
-            attribute: .Right,
-            multiplier: 1.0,
-            constant: 0)
-
-        view.addConstraint(topConstraint)
-        view.addConstraint(bottomConstraint)
-        view.addConstraint(leftConstraint)
-        view.addConstraint(rightConstraint)
-    }
-
-    // MARK: - Lazily Instantiated Objects
-
-    lazy var locationManager: CLLocationManager = {
-        let manager = CLLocationManager()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-
-        if CLLocationManager.authorizationStatus() == .NotDetermined {
-            manager.requestWhenInUseAuthorization()
-        }
-
-        return manager
-    }()
-
-    lazy var mapView: MKMapView = {
-        let view = MKMapView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.delegate = self
-
-        return view
-    }()
-
+	func parseAnnotationsFromDataAndRefresh(){
+		self.pins = []
+		
+		for student in Students.sharedInstance().locations {
+			
+			let lat = student.latitude
+			let long = student.longitude
+			let mediaURL = student.mediaURL
+			let annotation = MKPointAnnotation()
+			let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: long)
+			
+			annotation.coordinate = coordinate
+			annotation.title = student.firstName + " " + student.lastName
+			annotation.subtitle = mediaURL
+			self.pins.append(annotation)
+		}
+		
+		mapView.removeAnnotations(mapView.annotations)
+		mapView.addAnnotations(pins)
+	}
 }
